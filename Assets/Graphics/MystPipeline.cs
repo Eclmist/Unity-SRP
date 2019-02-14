@@ -5,7 +5,7 @@ public class MystPipeline : RenderPipeline
 {
     protected const string MYST_DEFAULT_UNLIT = "SRPDefaultUnlit";
 
-    protected CommandBuffer commandBuffer = new CommandBuffer
+    protected CommandBuffer cameraBuffer = new CommandBuffer
     {
         name = "Render Camera"
     };
@@ -40,13 +40,14 @@ public class MystPipeline : RenderPipeline
         // Explicitly clear the render target with command buffers
         CameraClearFlags clearFlags = camera.clearFlags;
 
-        commandBuffer.ClearRenderTarget(
+        cameraBuffer.ClearRenderTarget(
             (clearFlags & CameraClearFlags.Depth) != 0,
             (clearFlags & CameraClearFlags.Color) != 0,
             camera.backgroundColor
         );
-        context.ExecuteCommandBuffer(commandBuffer);
-        commandBuffer.Clear();
+        cameraBuffer.BeginSample("Render Camera");
+        context.ExecuteCommandBuffer(cameraBuffer);
+        cameraBuffer.Clear();
 
         // Setup default shaders for drawing
         DrawingSettings drawingSettings = new DrawingSettings();
@@ -78,7 +79,12 @@ public class MystPipeline : RenderPipeline
         filterSettings.renderQueueRange = RenderQueueRange.transparent;
         context.DrawRenderers(cullingResults, ref drawingSettings, ref filterSettings);
 
+        cameraBuffer.EndSample("Render Camera");
+        context.ExecuteCommandBuffer(cameraBuffer);
+        cameraBuffer.Clear();
+
         // Submit render loop for execution
         context.Submit();
     }
+
 }
