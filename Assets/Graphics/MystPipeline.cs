@@ -3,7 +3,12 @@ using UnityEngine.Rendering;
 
 public class MystPipeline : RenderPipeline
 {
-    const string MYST_DEFAULT_UNLIT = "SRPDefaultUnlit";
+    protected const string MYST_DEFAULT_UNLIT = "SRPDefaultUnlit";
+
+    protected CommandBuffer commandBuffer = new CommandBuffer
+    {
+        name = "Render Camera"
+    };
 
     protected override void Render(ScriptableRenderContext context, Camera[] cameras)
     {
@@ -34,18 +39,14 @@ public class MystPipeline : RenderPipeline
 
         // Explicitly clear the render target with command buffers
         CameraClearFlags clearFlags = camera.clearFlags;
-        CommandBuffer buffer = new CommandBuffer
-        { 
-            name = camera.name
-        };
 
-        buffer.ClearRenderTarget(
+        commandBuffer.ClearRenderTarget(
             (clearFlags & CameraClearFlags.Depth) != 0,
             (clearFlags & CameraClearFlags.Color) != 0,
             camera.backgroundColor
         );
-        context.ExecuteCommandBuffer(buffer);
-        buffer.Release();
+        context.ExecuteCommandBuffer(commandBuffer);
+        commandBuffer.Clear();
 
         // Setup default shaders for drawing
         DrawingSettings drawingSettings = new DrawingSettings();
