@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
+using Conditional = System.Diagnostics.ConditionalAttribute; // basically #ifdef
 
 public class MystPipeline : RenderPipeline
 {
@@ -95,6 +96,7 @@ public class MystPipeline : RenderPipeline
     }
 
     // Fallback for when something isn't supported
+    [Conditional("DEVELPOMENT_BUILD"), Conditional("UNITY_EDITOR")]
     protected void DrawDefaultPipeline(ScriptableRenderContext context, Camera camera)
     {
         if (errorMaterial == null)
