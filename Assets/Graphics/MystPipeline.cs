@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
-using Conditional = System.Diagnostics.ConditionalAttribute; // basically #ifdef
+using Conditional = System.Diagnostics.ConditionalAttribute; // basically compile time #ifdef
 
 public class MystPipeline : RenderPipeline
 {
@@ -35,6 +35,14 @@ public class MystPipeline : RenderPipeline
         {
             return;
         }
+
+        // Inject world space UI into scene view
+#if UNITY_EDITOR
+        if (camera.cameraType == CameraType.SceneView)
+        {
+            ScriptableRenderContext.EmitWorldGeometryForSceneView(camera);
+        }
+#endif
 
         // Sends culling instructions to context
         cullingResults = context.Cull(ref cullingParams);
