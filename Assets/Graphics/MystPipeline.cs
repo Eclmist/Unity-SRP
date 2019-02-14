@@ -3,8 +3,12 @@ using UnityEngine.Rendering;
 
 public class MystPipeline : RenderPipeline
 {
-    protected const string MYST_DEFAULT_UNLIT = "SRPDefaultUnlit";
+    protected const string MYST_SHADERID_DEFAULT_UNLIT = "SRPDefaultUnlit";
+    protected const string MYST_SHADERID_DEFAULT_FORWARD = "ForwardBase";
+    protected const string MYST_SHADER_ERROR = "Hidden/InternalErrorShader";
 
+    protected Material errorMaterial;
+    protected CullingResults cullingResults;
     protected CommandBuffer cameraBuffer = new CommandBuffer
     {
         name = "Render Camera"
@@ -32,7 +36,7 @@ public class MystPipeline : RenderPipeline
         }
 
         // Sends culling instructions to context
-        CullingResults cullingResults = context.Cull(ref cullingParams);
+        cullingResults = context.Cull(ref cullingParams);
 
         // Sets up camera specific global shader params
         context.SetupCameraProperties(camera);
@@ -51,7 +55,7 @@ public class MystPipeline : RenderPipeline
 
         // Setup default shaders for drawing
         DrawingSettings drawingSettings = new DrawingSettings();
-        drawingSettings.SetShaderPassName(0, new ShaderTagId(MYST_DEFAULT_UNLIT));
+        drawingSettings.SetShaderPassName(0, new ShaderTagId(MYST_SHADERID_DEFAULT_UNLIT));
 
         // Setup default sort mode
         SortingSettings sortingSettings = new SortingSettings(camera);
@@ -79,6 +83,9 @@ public class MystPipeline : RenderPipeline
         filterSettings.renderQueueRange = RenderQueueRange.transparent;
         context.DrawRenderers(cullingResults, ref drawingSettings, ref filterSettings);
 
+        // Fallback for everything else
+        DrawDefaultPipeline(context, camera);
+
         cameraBuffer.EndSample("Render Camera");
         context.ExecuteCommandBuffer(cameraBuffer);
         cameraBuffer.Clear();
@@ -87,4 +94,29 @@ public class MystPipeline : RenderPipeline
         context.Submit();
     }
 
+    // Fallback for when something isn't supported
+    protected void DrawDefaultPipeline(ScriptableRenderContext context, Camera camera)
+    {
+        if (errorMaterial == null)
+        {
+            Shader errorShader = Shader.Find(MYST_SHADER_ERROR);
+            errorMaterial = new Material(errorShader)
+            {
+                hideFlags = HideFlags.HideAndDontSave
+            };
+        }
+
+        DrawingSettings drawingSettings = new DrawingSettings();
+        drawingSettings.SetShaderPassName(0, new ShaderTagId("ForwardBase"));
+        drawingSettings.SetShaderPassName(1, new ShaderTagId("PrepassBase"));
+        drawingSettings.SetShaderPassName(2, new ShaderTagId("Always"));
+        drawingSettings.SetShaderPassName(3, new ShaderTagId("Vertex"));
+        drawingSettings.SetShaderPassName(4, new ShaderTagId("VertexLMRGBM"));
+        drawingSettings.SetShaderPassName(5, new ShaderTagId("VertexLM"));
+        drawingSettings.overrideMaterial = errorMaterial;
+        drawingSettings.overrideMaterialPassIndex = 0;
+
+        FilteringSettings filterSettings = new FilteringSettings(RenderQueueRange.all);
+        context.DrawRenderers(cullingResults, ref drawingSettings, ref filterSettings);
+    }
 }
