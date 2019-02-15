@@ -13,3 +13,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4b47afc562ef9b24a8613556a29e220d, type: 3}
   m_Name: Myst Pipeline
   m_EditorClassIdentifier: 
+  dynamicBatching: 1
+  instancing: 1

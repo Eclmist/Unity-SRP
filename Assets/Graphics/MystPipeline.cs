@@ -5,6 +5,15 @@ using Conditional = System.Diagnostics.ConditionalAttribute; // basically compil
 
 public class MystPipeline : RenderPipeline
 {
+    // Lighting
+    protected const uint maxVisibleLights = 8;
+
+    static int visibleLightColorsId = Shader.PropertyToID("_VisibleLightColors");
+    static int visibleLightDirectionsId = Shader.PropertyToID("_VisibleLightDirections");
+
+    protected Vector4[] visibleLightColors = new Vector4[maxVisibleLights];
+    protected Vector4[] visibleLightDirections = new Vector4[maxVisibleLights];
+
     // Shader identifiers
     protected const string MYST_SHADERID_DEFAULT_UNLIT = "SRPDefaultUnlit";
     protected const string MYST_SHADERID_DEFAULT_FORWARD = "ForwardBase";
@@ -32,6 +41,7 @@ public class MystPipeline : RenderPipeline
 
     public MystPipeline (PipelineFlags flags)
     {
+        GraphicsSettings.lightsUseLinearIntensity = true;
         currentPipelineFlags = flags;
     }
 
@@ -78,7 +88,15 @@ public class MystPipeline : RenderPipeline
             (clearFlags & CameraClearFlags.Color) != 0,
             camera.backgroundColor
         );
+
+        ConfigureLights();
+
         cameraBuffer.BeginSample("Render Camera");
+
+        // Setup light buffers
+        cameraBuffer.SetGlobalVectorArray(visibleLightColorsId, visibleLightColors);
+        cameraBuffer.SetGlobalVectorArray(visibleLightDirectionsId, visibleLightDirections);
+
         context.ExecuteCommandBuffer(cameraBuffer);
         cameraBuffer.Clear();
 
@@ -124,6 +142,33 @@ public class MystPipeline : RenderPipeline
 
         // Submit render loop for execution
         context.Submit();
+    }
+
+    void ConfigureLights()
+    {
+        int i = 0;
+
+        for (; i < cullingResults.visibleLights.Length; i++)
+        {
+            if (i >= maxVisibleLights)
+                break;
+
+            VisibleLight light = cullingResults.visibleLights[i];
+            visibleLightColors[i] = light.finalColor;
+
+            Vector4 v = light.localToWorldMatrix.GetColumn(2);
+
+            // Invert vector for lighting computations
+            v.x = -v.x;
+            v.y = -v.y;
+            v.z = -v.z;
+            visibleLightDirections[i] = v;
+        }
+
+        for (; i < maxVisibleLights; i++)
+        {
+            visibleLightColors[i] = Color.clear;
+        }
     }
 
     // Fallback for when something isn't supported
