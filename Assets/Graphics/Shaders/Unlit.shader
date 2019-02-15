@@ -10,7 +10,10 @@
         {
             HLSLPROGRAM
             
-            #pragma target 5.1
+            #pragma target 5.0
+
+            // Creates shader permutations for instancing
+            #pragma multi_compile_instancing
 
             #pragma vertex VS_Unlit
             #pragma fragment PS_Unlit
