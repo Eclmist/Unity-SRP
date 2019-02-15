@@ -7,10 +7,12 @@
         {
             HLSLPROGRAM
             
+            #pragma target 5.1
+
             #pragma vertex VS_Unlit
             #pragma fragment PS_Unlit
 
-            #include "Unlit.hlsl"
+            #include "../ShaderLibrary/Unlit.hlsl"
 
             ENDHLSL
         }
