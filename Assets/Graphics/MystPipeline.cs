@@ -11,10 +11,13 @@ public class MystPipeline : RenderPipeline
     static int visibleLightColorsId = Shader.PropertyToID("_VisibleLightColors");
     static int visibleLightDirectionsOrPositionsId = Shader.PropertyToID("_VisibleLightDirectionsOrPositions");
     static int visibleLightAttenuationId = Shader.PropertyToID("_VisibleLightAttenuations");
+    static int visibleLightSpotDirectionId = Shader.PropertyToID("_VisibleLightSpotDirections");
 
     protected Vector4[] visibleLightColors = new Vector4[maxVisibleLights];
     protected Vector4[] visibleLightDirectionsOrPositions = new Vector4[maxVisibleLights];
     protected Vector4[] visibleLightAttenuations = new Vector4[maxVisibleLights];
+    protected Vector4[] visibleLightSpotDirections = new Vector4[maxVisibleLights];
+
 
     // Shader identifiers
     protected const string MYST_SHADERID_DEFAULT_UNLIT = "SRPDefaultUnlit";
@@ -99,6 +102,7 @@ public class MystPipeline : RenderPipeline
         cameraBuffer.SetGlobalVectorArray(visibleLightColorsId, visibleLightColors);
         cameraBuffer.SetGlobalVectorArray(visibleLightDirectionsOrPositionsId, visibleLightDirectionsOrPositions);
         cameraBuffer.SetGlobalVectorArray(visibleLightAttenuationId, visibleLightAttenuations);
+        cameraBuffer.SetGlobalVectorArray(visibleLightSpotDirectionId, visibleLightSpotDirections);
 
         context.ExecuteCommandBuffer(cameraBuffer);
         cameraBuffer.Clear();
@@ -160,6 +164,7 @@ public class MystPipeline : RenderPipeline
             visibleLightColors[i] = light.finalColor;
 
             Vector4 attenuation = Vector4.zero;
+            attenuation.w = 1f;
 
             if (light.lightType == LightType.Directional)
             {
@@ -177,6 +182,24 @@ public class MystPipeline : RenderPipeline
                 // Position stored in 4th column
                 visibleLightDirectionsOrPositions[i] = light.localToWorldMatrix.GetColumn(3);
                 attenuation.x = 1f / Mathf.Max(light.range * light.range, 0.00001f);
+
+                if (light.lightType == LightType.Spot)
+                {
+                    Vector4 v = light.localToWorldMatrix.GetColumn(2);
+                    v.x = -v.x;
+                    v.y = -v.y;
+                    v.z = -v.z;
+                    visibleLightSpotDirections[i] = v;
+
+                    // Math magic to calculate cone edge falloff
+                    float outerRadius = Mathf.Deg2Rad * 0.5f * light.spotAngle;
+                    float outerCosine = Mathf.Cos(outerRadius);
+					float outerTangent = Mathf.Tan(outerRadius);
+					float innerCosine = Mathf.Cos(Mathf.Atan(((46f / 64f) * outerTangent)));
+                    float angleRange = Mathf.Max(innerCosine - outerCosine, 0.00001f);
+                    attenuation.z = 1f / angleRange;
+                    attenuation.w = -outerCosine * attenuation.z;
+                }
             }
 
             visibleLightAttenuations[i] = attenuation;

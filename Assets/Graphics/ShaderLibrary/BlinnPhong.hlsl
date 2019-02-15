@@ -17,15 +17,15 @@ CBUFFER_START(_LightBuffer)
     float4 _VisibleLightColors[MAX_VISIBLE_LIGHTS];
     float4 _VisibleLightDirectionsOrPositions[MAX_VISIBLE_LIGHTS];
     float4 _VisibleLightAttenuations[MAX_VISIBLE_LIGHTS];
+    float4 _VisibleLightSpotDirections[MAX_VISIBLE_LIGHTS];
 CBUFFER_END
 
 float3 DiffuseLight(int index, float3 normal, float3 worldPos)
 {
     float3 lightColor = _VisibleLightColors[index].rgb;
-
-    // Either a direction vector or a position vector, depending on the type of light
-    float4 lightDirOrPos = _VisibleLightDirectionsOrPositions[index];
+    float4 lightDirOrPos = _VisibleLightDirectionsOrPositions[index]; // Either a direction vector or a position vector, depending on the type of light
     float4 lightAttenuation = _VisibleLightAttenuations[index];
+    float3 spotDirection = _VisibleLightSpotDirections[index].xyz;
 
     // If it is a position vector, make it a direction vector by minusing worldpos.
     // If not, w will be 0 and the operation will do nothing
@@ -42,9 +42,14 @@ float3 DiffuseLight(int index, float3 normal, float3 worldPos)
     rangeFade = saturate(1.0 - rangeFade * rangeFade);
     rangeFade *= rangeFade;
 
+    // Spotlight cone
+    float spotFade = dot(spotDirection, lightDir);
+    spotFade = saturate(spotFade * lightAttenuation.z + lightAttenuation.w);
+    spotFade *= spotFade;
+
     // Inverse square law for point light attenuation
     float distanceSqr = max(dot(lightVector, lightVector), 0.00001);
-    diffuse = diffuse * (rangeFade / distanceSqr);
+    diffuse *= spotFade * (rangeFade / distanceSqr);
 
     return diffuse * lightColor;
 }
