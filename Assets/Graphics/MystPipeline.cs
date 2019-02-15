@@ -9,10 +9,12 @@ public class MystPipeline : RenderPipeline
     protected const uint maxVisibleLights = 8;
 
     static int visibleLightColorsId = Shader.PropertyToID("_VisibleLightColors");
-    static int visibleLightDirectionsId = Shader.PropertyToID("_VisibleLightDirections");
+    static int visibleLightDirectionsOrPositionsId = Shader.PropertyToID("_VisibleLightDirectionsOrPositions");
+    static int visibleLightAttenuationId = Shader.PropertyToID("_VisibleLightAttenuations");
 
     protected Vector4[] visibleLightColors = new Vector4[maxVisibleLights];
-    protected Vector4[] visibleLightDirections = new Vector4[maxVisibleLights];
+    protected Vector4[] visibleLightDirectionsOrPositions = new Vector4[maxVisibleLights];
+    protected Vector4[] visibleLightAttenuations = new Vector4[maxVisibleLights];
 
     // Shader identifiers
     protected const string MYST_SHADERID_DEFAULT_UNLIT = "SRPDefaultUnlit";
@@ -95,7 +97,8 @@ public class MystPipeline : RenderPipeline
 
         // Setup light buffers
         cameraBuffer.SetGlobalVectorArray(visibleLightColorsId, visibleLightColors);
-        cameraBuffer.SetGlobalVectorArray(visibleLightDirectionsId, visibleLightDirections);
+        cameraBuffer.SetGlobalVectorArray(visibleLightDirectionsOrPositionsId, visibleLightDirectionsOrPositions);
+        cameraBuffer.SetGlobalVectorArray(visibleLightAttenuationId, visibleLightAttenuations);
 
         context.ExecuteCommandBuffer(cameraBuffer);
         cameraBuffer.Clear();
@@ -123,7 +126,7 @@ public class MystPipeline : RenderPipeline
         context.DrawRenderers(cullingResults, ref drawingSettings, ref filterSettings);
 
         // Sends instructions to draw skybox
-        context.DrawSkybox(camera);
+        // context.DrawSkybox(camera);
 
         // Setup sort mode for transparent (back to front)
         sortingSettings.criteria = SortingCriteria.CommonTransparent;
@@ -156,13 +159,27 @@ public class MystPipeline : RenderPipeline
             VisibleLight light = cullingResults.visibleLights[i];
             visibleLightColors[i] = light.finalColor;
 
-            Vector4 v = light.localToWorldMatrix.GetColumn(2);
+            Vector4 attenuation = Vector4.zero;
 
-            // Invert vector for lighting computations
-            v.x = -v.x;
-            v.y = -v.y;
-            v.z = -v.z;
-            visibleLightDirections[i] = v;
+            if (light.lightType == LightType.Directional)
+            {
+                // Direction stored in 3rd column
+                Vector4 v = light.localToWorldMatrix.GetColumn(2);
+
+                // Invert vector for lighting computations
+                v.x = -v.x;
+                v.y = -v.y;
+                v.z = -v.z;
+                visibleLightDirectionsOrPositions[i] = v;
+            }
+            else
+            {
+                // Position stored in 4th column
+                visibleLightDirectionsOrPositions[i] = light.localToWorldMatrix.GetColumn(3);
+                attenuation.x = 1f / Mathf.Max(light.range * light.range, 0.00001f);
+            }
+
+            visibleLightAttenuations[i] = attenuation;
         }
 
         for (; i < maxVisibleLights; i++)
