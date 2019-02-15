@@ -11,6 +11,10 @@ CBUFFER_START(UnityPerDraw)
     float4x4 unity_ObjectToWorld;
 CBUFFER_END
 
+CBUFFER_START(UnityPerMaterial)
+    float4 _Color;
+CBUFFER_END
+
 struct VS_INPUT
 {
     float4 pos : POSITION;
@@ -32,7 +36,7 @@ VS_OUTPUT VS_Unlit(const VS_INPUT v)
 
 float4 PS_Unlit(const VS_OUTPUT input) : SV_TARGET
 {
-    return 1;
+    return _Color;
 }
 
 #endif // MYST_UNLIT_INCLUDED

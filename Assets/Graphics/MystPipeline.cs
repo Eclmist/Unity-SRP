@@ -1,19 +1,39 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Rendering;
 using Conditional = System.Diagnostics.ConditionalAttribute; // basically compile time #ifdef
 
 public class MystPipeline : RenderPipeline
 {
+    // Shader identifiers
     protected const string MYST_SHADERID_DEFAULT_UNLIT = "SRPDefaultUnlit";
     protected const string MYST_SHADERID_DEFAULT_FORWARD = "ForwardBase";
     protected const string MYST_SHADER_ERROR = "Hidden/InternalErrorShader";
 
+    // Materials
     protected Material errorMaterial;
-    protected CullingResults cullingResults;
+
     protected CommandBuffer cameraBuffer = new CommandBuffer
     {
         name = "Render Camera"
     };
+
+    protected CullingResults cullingResults;
+
+    protected PipelineFlags currentPipelineFlags;
+
+    [Flags]
+    public enum PipelineFlags
+    {
+        None = 0,
+        DynamicBatching = 1,
+        Instancing = 2,
+    }
+
+    public MystPipeline (PipelineFlags flags)
+    {
+        currentPipelineFlags = flags;
+    }
 
     protected override void Render(ScriptableRenderContext context, Camera[] cameras)
     {
@@ -65,6 +85,9 @@ public class MystPipeline : RenderPipeline
         // Setup default shaders for drawing
         DrawingSettings drawingSettings = new DrawingSettings();
         drawingSettings.SetShaderPassName(0, new ShaderTagId(MYST_SHADERID_DEFAULT_UNLIT));
+
+        drawingSettings.enableDynamicBatching = (currentPipelineFlags & PipelineFlags.DynamicBatching) != 0;
+        drawingSettings.enableInstancing      = (currentPipelineFlags & PipelineFlags.Instancing)      != 0;
 
         // Setup default sort mode
         SortingSettings sortingSettings = new SortingSettings(camera);
