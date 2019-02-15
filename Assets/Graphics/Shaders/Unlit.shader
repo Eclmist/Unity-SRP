@@ -15,6 +15,9 @@
             // Creates shader permutations for instancing
             #pragma multi_compile_instancing
 
+            // Don't support non-uniform scale instancing for now
+            #pragma instancing_options assumeuniformscaling
+
             #pragma vertex VS_Unlit
             #pragma fragment PS_Unlit
 
